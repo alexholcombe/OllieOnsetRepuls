@@ -174,6 +174,8 @@ circle = visual.Circle(
 
 stimDur = 0.3
 stimDurFrames = int( np.floor(stimDur / (1./refreshRate)) )
+speed = 1 #degrees/second
+changeRadiusPerFrame = speed*1./refreshRate
 
 # run the experiment
 nDone = 0
@@ -182,6 +184,7 @@ for thisTrial in trials:  # handler can act like a for loop
     circle.radius =  thisTrial['circleRadius']
     for frame in range(stimDurFrames):
         circle.draw()
+        circle.radius = circle.radius + thisTrial['direction'] * changeRadiusPerFrame 
         myWin.flip()
         
     thisReactionTime = random() 
@@ -196,18 +199,27 @@ for thisTrial in trials:  # handler can act like a for loop
 # After the experiment, print a new line
 print('\n')
 
+if os.path.isdir('.'+os.sep+'dataRaw'):
+    dataDir='dataRaw'
+else:
+    print('"dataRaw" directory does not exist, so saving data in present working directory')
+    dataDir='.'
+expname = ''
+timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime()) 
+datafileName = dataDir+'/'+subject+ '_' + str(session) + '_' + expname+timeAndDateStr
+
 # Write summary data to screen
 trials.printAsText()
 
 # Write summary data to a text file ...
-trials.saveAsText(fileName='testData')
+trials.saveAsText(fileName=datafileName)
 
 # ... or an xlsx file (which supports sheets)
-trials.saveAsExcel(fileName='testData')
+trials.saveAsExcel(fileName=datafileName)
 
 # Save a copy of the whole TrialHandler object, which can be reloaded later to
 # re-create the experiment.
-trials.saveAsPickle(fileName='testData')
+trials.saveAsPickle(fileName=datafileName)
 
 # Wide format is useful for analysis with R or SPSS.
-df = trials.saveAsWideText('testDataWide.txt')
+df = trials.saveAsWideText(datafileName)
