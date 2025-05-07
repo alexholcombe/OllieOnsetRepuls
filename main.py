@@ -191,11 +191,8 @@ respStim = visual.TextStim(myWin,pos=(0,0),colorSpace='rgb',color=(1,1,0),alignH
 clickSound, badKeySound = stringResponse.setupSoundsForResponse()
 requireAcceptance = False
 
-def collectResponse(probe,autopilot,response,responseAutopilot):
+def collectResponse(probe,autopilot):
     #Handle response, calculate whether correct, ########################################
-    if autopilot:
-        responses = responsesAutopilot
-        if autopilot: print("autopilot and fake responses are:",responses)
     respPromptStim.setText('Press < to move probe inward, > to move outwards; use M and ? for larger steps')
     #Set probe to have a random initial radius
     probeInitialRadius = np.random.uniform(radiusMin/2,radiusMax+radiusMin/2)
@@ -205,32 +202,35 @@ def collectResponse(probe,autopilot,response,responseAutopilot):
     #Create a loop allowing participant to move a probe to where they thought the stimulus started
     #and then accept or reject the response
     respFinished = False
-    if autopilot:
+    if autopilot: #set response to random
         probe.radius = np.random.uniform(radiusMin,radiusMax)
-    while not autopilot and not responseFinished:
+    respRadius = probe.radius
+    while not autopilot and not respFinished:
         respPromptStim.draw()
+        probe.radius = respRadius
         probe.draw()
         myWin.flip()
         #Check for response
-        keys = event.getKeys(keyList=['<','>','m','?','escape'])
+        keys = event.getKeys()
         if len(keys) > 0:
             #Just check first key pressed since last frame
             key = keys[0]
-            if key == 'escape':
-                respFinished = True
-            elif key == '<':
-                probe.radius = probe.radius - 1
-            elif key == '>':
-                probe.radius = probe.radius + 1
-            elif key == 'm':
-                probe.radius = probe.radius - 5
-            elif key == '?':
-                probe.radius = probe.radius + 5
+            key = key.upper()
+            print(key)
+            if key == 'ESCAPE':
+               respFinished = True
+            elif key in ['J']:
+                respRadius = respRadius - 1
+            elif key in ['K']:
+                respRadius = respRadius + 1
+            elif key=='H':
+                respRadius = respRadius - 5
+            elif key in ['L']:
+                respRadius = respRadius + 5
+            respRadius = max(0,respRadius) #Don't allow negative respRadius value
         psychopy.event.clearEvents() #Clear keyboard and mouse buffer
-    trials.addData('responseRadius',probe.radius)
-    return (probe.radius)
-
-
+        #print('After clearing, event.getKeys = ',event.getKeys())
+    return respRadius
 
 # run the experiment
 nDone = 0
@@ -252,9 +252,13 @@ for thisTrial in trials:  # handler can act like a for loop
     msg = 'trial %i had position %s in the list (circleRadius=%.1f)'
     print(msg % (nDone, trials.thisIndex, thisTrial['circleRadius']))
 
-    respRadius = collectResponse(circle,autopilot,response,responseAutopilot)
+    respRadius = collectResponse(circle,autopilot)
+    print('respRadius=',respRadius)
+    trials.data.add('dummy', thisReactionTime)  # add the data to our set
+    trials.data.add('responseRadius',respRadius)
     respError = respRadius - thisTrial['circleRadius']
-    trials.addData('respError', respError)
+    print('respError=',respError)
+    trials.data.add('respError', respError)
 
 # After the experiment, print a new line
 print('\n')
