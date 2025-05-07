@@ -14,12 +14,16 @@ from copy import deepcopy
 import time, sys, os#, pylab
 import string
 from random import random
-
+try:
+    import stringResponse
+except ImportError:
+    print('Could not import stringResponse.py (you need that file to be in the same directory)')
 quitFinder=False
 refreshRate = 60.0
+autoLogging = True
 
 monitorname = 'testmonitor'
-widthPixRequested= 1024 #monitor width in pixels of Agosta
+widthPixRequested= 1024 #monitor width in pixels
 heightPixRequested= 768 #800 #monitor height in pixels
 monitorwidth = 40.5 #monitor width in cm
 scrn=0 #0 to use main screen, 1 to use external screen connected to computer
@@ -28,7 +32,8 @@ allowGUI = False
 viewdist = 57. #cm
 bgColor = [-.7,-.7,-.7] # [-1,-1,-1]
 
-
+#####################################################################
+#Do an initial test of the screen refresh rate and resolution
 waitBlank = False
 mon = monitors.Monitor(monitorname,width=monitorwidth, distance=viewdist)#relying on  monitorwidth cm (39 for Mitsubishi to do deg calculations) and gamma info in calibratn
 mon.setSizePix( (widthPixRequested,heightPixRequested) )
@@ -108,6 +113,8 @@ autopilot=False
 trialsPerCondition = 1
 subject='Herbert'
 session='a'
+
+#############################################################################################
 #Create new dialog box, with results of timing test and with experiment parameters to set like subject name and session
 dlgLabelsOrdered = list() #new dialog box
 session='a'
@@ -145,12 +152,12 @@ else:
    core.quit()
 
 
-
-# create your list of stimuli
+# Create list of stimuli
 # NB as of version 1.62 you could simply import an excel spreadsheet with this
 # using data.importConditions('someFile.xlsx')
 stimList = []
-for circleRadius in range(3, 20, 5):
+radiusMin = 3; radiusMax = 20
+for circleRadius in range(radiusMin, radiusMax, 5):
     for direction in [-1,1]:
         # append a python 'dictionary' to the list
         stimList.append({'circleRadius': circleRadius, 'direction':direction})
@@ -159,7 +166,6 @@ print(stimList)
 # organize them with the trial handler
 trials = data.TrialHandler(stimList, 10,
                            extraInfo={'participant': "Nobody", 'session':'001'})
-
 
 myWin = openMyStimWindow()
 
@@ -177,6 +183,55 @@ stimDurFrames = int( np.floor(stimDur / (1./refreshRate)) )
 speed = 1 #degrees/second
 changeRadiusPerFrame = speed*1./refreshRate
 
+
+respPromptStim = visual.TextStim(myWin,pos=(0, -.8),colorSpace='rgb',color=(1,1,1),alignHoriz='center', alignVert='center',height=.1,units='norm',autoLog=autoLogging)
+acceptTextStim = visual.TextStim(myWin,pos=(0, -.7),colorSpace='rgb',color=(1,1,1),alignHoriz='center', alignVert='center',height=.1,units='norm',autoLog=autoLogging)
+acceptTextStim.setText('Hit ENTER to accept. Backspace to edit')
+respStim = visual.TextStim(myWin,pos=(0,0),colorSpace='rgb',color=(1,1,0),alignHoriz='center', alignVert='center',height=.16,units='norm',autoLog=autoLogging)
+clickSound, badKeySound = stringResponse.setupSoundsForResponse()
+requireAcceptance = False
+
+def collectResponse(probe,autopilot,response,responseAutopilot):
+    #Handle response, calculate whether correct, ########################################
+    if autopilot:
+        responses = responsesAutopilot
+        if autopilot: print("autopilot and fake responses are:",responses)
+    respPromptStim.setText('Press < to move probe inward, > to move outwards; use M and ? for larger steps')
+    #Set probe to have a random initial radius
+    probeInitialRadius = np.random.uniform(radiusMin/2,radiusMax+radiusMin/2)
+    probe.radius = probeInitialRadius
+    trials.addData('probeInitialRadius',probeInitialRadius)
+
+    #Create a loop allowing participant to move a probe to where they thought the stimulus started
+    #and then accept or reject the response
+    respFinished = False
+    if autopilot:
+        probe.radius = np.random.uniform(radiusMin,radiusMax)
+    while not autopilot and not responseFinished:
+        respPromptStim.draw()
+        probe.draw()
+        myWin.flip()
+        #Check for response
+        keys = event.getKeys(keyList=['<','>','m','?','escape'])
+        if len(keys) > 0:
+            #Just check first key pressed since last frame
+            key = keys[0]
+            if key == 'escape':
+                respFinished = True
+            elif key == '<':
+                probe.radius = probe.radius - 1
+            elif key == '>':
+                probe.radius = probe.radius + 1
+            elif key == 'm':
+                probe.radius = probe.radius - 5
+            elif key == '?':
+                probe.radius = probe.radius + 5
+        psychopy.event.clearEvents() #Clear keyboard and mouse buffer
+    trials.addData('responseRadius',probe.radius)
+    return (probe.radius)
+
+
+
 # run the experiment
 nDone = 0
 for thisTrial in trials:  # handler can act like a for loop
@@ -186,7 +241,8 @@ for thisTrial in trials:  # handler can act like a for loop
         circle.draw()
         circle.radius = circle.radius + thisTrial['direction'] * changeRadiusPerFrame 
         myWin.flip()
-        
+    
+    #Collect response
     thisReactionTime = random() 
     thisChoice = round(random())
     trials.data.add('RT', thisReactionTime)  # add the data to our set
@@ -195,6 +251,10 @@ for thisTrial in trials:  # handler can act like a for loop
 
     msg = 'trial %i had position %s in the list (circleRadius=%.1f)'
     print(msg % (nDone, trials.thisIndex, thisTrial['circleRadius']))
+
+    respRadius = collectResponse(circle,autopilot,response,responseAutopilot)
+    respError = respRadius - thisTrial['circleRadius']
+    trials.addData('respError', respError)
 
 # After the experiment, print a new line
 print('\n')
