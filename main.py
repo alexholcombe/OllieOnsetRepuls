@@ -203,8 +203,9 @@ def collectResponse(probe,autopilot):
     #and then accept or reject the response
     respFinished = False
     if autopilot: #set response to random
-        probe.radius = np.random.uniform(radiusMin,radiusMax)
+        probe.radius = random.uniform(radiusMin,radiusMax)
     respRadius = probe.radius
+    initialResponse = True
     while not autopilot and not respFinished:
         respPromptStim.draw()
         probe.radius = respRadius
@@ -217,7 +218,7 @@ def collectResponse(probe,autopilot):
             key = keys[0]
             key = key.upper()
             print(key)
-            if key == 'ESCAPE':
+            if not initialResponse and key == 'ESCAPE':
                respFinished = True
             elif key in ['J']:
                 respRadius = respRadius - 1
@@ -227,6 +228,7 @@ def collectResponse(probe,autopilot):
                 respRadius = respRadius - 5
             elif key in ['L']:
                 respRadius = respRadius + 5
+            initialResponse = False
             respRadius = max(0,respRadius) #Don't allow negative respRadius value
         psychopy.event.clearEvents() #Clear keyboard and mouse buffer
         #print('After clearing, event.getKeys = ',event.getKeys())
@@ -286,4 +288,5 @@ trials.saveAsExcel(fileName=datafileName)
 trials.saveAsPickle(fileName=datafileName)
 
 # Wide format is useful for analysis with R or SPSS.
-df = trials.saveAsWideText(datafileName)
+trialHandlerDatafilename = 'myWide.tsv'
+df = trials.saveAsWideText(trialHandlerDatafilename,delim='\t')
