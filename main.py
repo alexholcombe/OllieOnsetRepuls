@@ -293,7 +293,8 @@ timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime())
 datafileName = dataDir+'/'+subject+ '_' + str(session) + '_' + expname+timeAndDateStr
 
 # Write summary data to screen
-trials.printAsText()
+#trials.printAsText()
+
 # Write summary data to a text file ...
 trials.saveAsText(fileName=datafileName+'summary')
 
