@@ -177,6 +177,13 @@ circle = visual.Circle(
     fillColor='white'  # Fill color
     #lineColor='black'  # Line color
 )
+respCircle = visual.Circle(
+    win=myWin,
+    radius=50,  # Radius 
+    edges=128,  # Number of edges to approximate the circle
+    fillColor='darkblue'  # Fill color
+    #lineColor='black'  # Line color
+)
 
 stimDur = 0.3
 stimDurFrames = int( np.floor(stimDur / (1./refreshRate)) )
@@ -191,9 +198,9 @@ respStim = visual.TextStim(myWin,pos=(0,0),colorSpace='rgb',color=(1,1,0),alignH
 clickSound, badKeySound = stringResponse.setupSoundsForResponse()
 requireAcceptance = False
 
-def collectResponse(probe,autopilot):
+def collectResponse(probe,autopilot,quitExperiment):
     #Handle response, calculate whether correct, ########################################
-    respPromptStim.setText('Press < to move probe inward, > to move outwards; use M and ? for larger steps')
+    respPromptStim.setText('Press J to move probe outward, K to move inwards; use H and L for larger steps')
     #Set probe to have a random initial radius
     probeInitialRadius = np.random.uniform(radiusMin/2,radiusMax+radiusMin/2)
     probe.radius = probeInitialRadius
@@ -205,8 +212,12 @@ def collectResponse(probe,autopilot):
     if autopilot: #set response to random
         probe.radius = random.uniform(radiusMin,radiusMax)
     respRadius = probe.radius
-    initialResponse = True
-    while not autopilot and not respFinished:
+    minRadius = .01
+    maxRadius = 50
+    hasResponded = False
+    rtClock = core.Clock()
+    rtClock.reset()
+    while not autopilot and not respFinished and not quitExperiment:
         respPromptStim.draw()
         probe.radius = respRadius
         probe.draw()
@@ -218,24 +229,32 @@ def collectResponse(probe,autopilot):
             key = keys[0]
             key = key.upper()
             print(key)
-            if not initialResponse and key == 'ESCAPE':
+            if hasResponded and key in ['ENTER','RETURN']:
                respFinished = True
             elif key in ['J']:
                 respRadius = respRadius - 1
+                hasResponded = True
             elif key in ['K']:
                 respRadius = respRadius + 1
-            elif key=='H':
+                hasResponded = True
+            elif key in ['H']:
                 respRadius = respRadius - 5
+                hasResponded = True
             elif key in ['L']:
                 respRadius = respRadius + 5
-            initialResponse = False
-            respRadius = max(0,respRadius) #Don't allow negative respRadius value
+                hasResponded = True
+            elif key in ['ESCAPE']:
+                quitExperiment = True
+            respRadius = max(minRadius,respRadius) #Don't allow negative respRadius value
+            respRadius = min(maxRadius,respRadius)
         psychopy.event.clearEvents() #Clear keyboard and mouse buffer
         #print('After clearing, event.getKeys = ',event.getKeys())
-    return respRadius
+    respTime = rtClock.getTime()
+    return respRadius, quitExperiment, respTime
 
 # run the experiment
 nDone = 0
+quitExperiment = False
 for thisTrial in trials:  # handler can act like a for loop
     # simulate some data
     circle.radius =  thisTrial['circleRadius']
@@ -245,22 +264,21 @@ for thisTrial in trials:  # handler can act like a for loop
         myWin.flip()
     
     #Collect response
-    thisReactionTime = random() 
-    thisChoice = round(random())
-    trials.data.add('RT', thisReactionTime)  # add the data to our set
-    trials.data.add('choice', thisChoice)
     nDone += 1  # just for a quick reference
 
     msg = 'trial %i had position %s in the list (circleRadius=%.1f)'
     print(msg % (nDone, trials.thisIndex, thisTrial['circleRadius']))
 
-    respRadius = collectResponse(circle,autopilot)
-    print('respRadius=',respRadius)
-    trials.data.add('dummy', thisReactionTime)  # add the data to our set
+    respRadius, quitExperiment, respTime = collectResponse(respCircle,autopilot,quitExperiment)
+    print('quitExperiment=',quitExperiment,'respRadius=',respRadius)
     trials.data.add('responseRadius',respRadius)
     respError = respRadius - thisTrial['circleRadius']
     print('respError=',respError)
     trials.data.add('respError', respError)
+    trials.data.add('respTime', respTime)  # add the data to our set
+
+    if quitExperiment:
+        break
 
 # After the experiment, print a new line
 print('\n')
@@ -276,17 +294,24 @@ datafileName = dataDir+'/'+subject+ '_' + str(session) + '_' + expname+timeAndDa
 
 # Write summary data to screen
 trials.printAsText()
-
 # Write summary data to a text file ...
-trials.saveAsText(fileName=datafileName)
+trials.saveAsText(fileName=datafileName+'summary')
 
 # ... or an xlsx file (which supports sheets)
-trials.saveAsExcel(fileName=datafileName)
+trials.saveAsExcel(fileName=datafileName+'.xls')
 
 # Save a copy of the whole TrialHandler object, which can be reloaded later to
 # re-create the experiment.
 trials.saveAsPickle(fileName=datafileName)
 
 # Wide format is useful for analysis with R or SPSS.
-trialHandlerDatafilename = 'myWide.tsv'
+trialHandlerDatafilename = datafileName+'wide'
 df = trials.saveAsWideText(trialHandlerDatafilename,delim='\t')
+
+#End of experiment
+if quitFinder and ('Darwin' in platform.system()): #If turned Finder (MacOS) off, now turn Finder back on.
+        applescript="\'tell application \"Finder\" to launch\'" #turn Finder back on
+        shellCmd = 'osascript -e '+applescript
+        os.system(shellCmd)
+print('Got to the end of the program and now quitting normally.')
+core.quit()
