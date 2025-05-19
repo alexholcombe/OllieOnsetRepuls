@@ -181,7 +181,7 @@ respCircle = visual.Circle(
     win=myWin,
     radius=50,  # Radius 
     edges=128,  # Number of edges to approximate the circle
-    fillColor='darkblue'  # Fill color
+    fillColor='blue'  # Fill color
     #lineColor='black'  # Line color
 )
 
