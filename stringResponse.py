@@ -122,7 +122,7 @@ def collectStringResponse(numCharsWanted,x,y,respPromptStim1,respPromptStim2,res
 # #######End of function definition that collects responses!!!! #####################################
 
 def setupSoundsForResponse():
-    fileName = '406__tictacshutup__click-1-d.wav'
+    fileName = 'sounds/406__tictacshutup__click-1-d.wav'
     try:
         clickSound=sound.Sound(fileName)
     except:
