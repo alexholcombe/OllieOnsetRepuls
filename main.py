@@ -281,12 +281,12 @@ trials.printAsText()
 trials.saveAsText(fileName=datafileName)
 
 # ... or an xlsx file (which supports sheets)
-trials.saveAsExcel(fileName=datafileName)
+trials.saveAsExcel(fileName=datafileName+'.xls')
 
 # Save a copy of the whole TrialHandler object, which can be reloaded later to
 # re-create the experiment.
 trials.saveAsPickle(fileName=datafileName)
 
 # Wide format is useful for analysis with R or SPSS.
-trialHandlerDatafilename = 'myWide.tsv'
+trialHandlerDatafilename = trialHandlerDatafilename+'wide'
 df = trials.saveAsWideText(trialHandlerDatafilename,delim='\t')
