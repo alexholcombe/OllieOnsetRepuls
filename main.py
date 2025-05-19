@@ -9,7 +9,7 @@
 from psychopy import monitors, visual, event, data, logging, core, sound, gui
 import psychopy.info
 import numpy as np
-from math import atan, log, ceil
+from math import atan, log, ceil, sqrt
 from copy import deepcopy
 import time, sys, os#, pylab
 import string
@@ -169,6 +169,20 @@ trials = data.TrialHandler(stimList, 10,
 
 myWin = openMyStimWindow()
 
+#Create flickering fixation point of random noise
+fixatnNoise = True
+fixSizePix = 20 #6 make fixation big so flicker more conspicuous
+if fixatnNoise:
+    checkSizeOfFixatnTexture = fixSizePix/4
+    nearestPowerOfTwo = round( sqrt(checkSizeOfFixatnTexture) )**2 #Because textures (created on next line) must be a power of 2
+    fixatnNoiseTexture = np.round( np.random.rand(nearestPowerOfTwo,nearestPowerOfTwo) ,0 )   *2.0-1 #Can counterphase flicker  noise texture to create salient flicker if you break fixation
+    fixation= visual.GratingStim(myWin,pos=(0,0), tex=fixatnNoiseTexture, size=(fixSizePix,fixSizePix), units='pix', mask='circle', interpolate=False, autoLog=autoLogging)
+    fixationBlank= visual.GratingStim(myWin,pos=(0,0), tex=-1*fixatnNoiseTexture, colorSpace='rgb',mask='circle',size=fixSizePix,units='pix',autoLog=autoLogging)
+else:
+    fixation = visual.GratingStim(myWin,tex='none',colorSpace='rgb',color=(.9,.9,.9),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
+    fixationBlank= visual.GratingStim(myWin,tex='none',colorSpace='rgb',color=(-1,-1,-1),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
+fixationPoint = visual.GratingStim(myWin,colorSpace='rgb',color=(1,1,1),mask='circle',units='pix',size=2,autoLog=autoLogging) #put a point in the center
+
 # Create a circle stimulus
 circle = visual.Circle(
     win=myWin,
@@ -256,10 +270,36 @@ def collectResponse(probe,autopilot,quitExperiment):
 nDone = 0
 quitExperiment = False
 for thisTrial in trials:  # handler can act like a for loop
-    # simulate some data
+  
+    fixatnPeriod = 0.5
+    fixatnFrames = int( 0.5*refreshRate )
+    for frame in range(fixatnFrames):
+        if frame % 2:
+            fixation.draw()#flicker fixation on and off at framerate to see when skip frame
+        else:
+            fixationBlank.draw()
+        fixationPoint.draw()
+        myWin.flip()
+    
+    #stimulus 
     circle.radius =  thisTrial['circleRadius']
+
     for frame in range(stimDurFrames):
+        #Determine what frame we are on
+        #if useClock: #Don't count on not missing frames. Use actual time.
+        #  t = clock.getTime()
+        #  n = round(t*refreshRate)
+        #else:
+
         circle.draw()
+
+        #Drawing fixation after stimuli rather than before because gratings don't seem to mask properly, leaving them showing at center 
+        if frame % 2:
+            fixation.draw()#flicker fixation on and off at framerate to see when skip frame
+        else:
+            fixationBlank.draw()
+        fixationPoint.draw()
+        
         circle.radius = circle.radius + thisTrial['direction'] * changeRadiusPerFrame 
         myWin.flip()
     
