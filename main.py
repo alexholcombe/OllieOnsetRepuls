@@ -5,13 +5,14 @@
 
 
 """
+import helpersAOH
 from psychopy import monitors, visual, event, data, logging, core, sound, gui
 import psychopy.info
 import numpy as np
 from math import atan, log, ceil, sqrt
 from copy import deepcopy
 import time, sys, os#, pylab
-import string
+import string, platform
 from random import random
 try:
     import stringResponse
@@ -20,6 +21,8 @@ except ImportError:
 quitFinder=False
 refreshRate = 60.0
 autoLogging = True
+process_priority = 'realtime' # 'normal' 'high' or 'realtime', but don't know if this works
+disable_gc = True
 
 monitorname = 'testmonitor'
 widthPixRequested= 1439 #1600 #monitor width in pixels
@@ -41,10 +44,22 @@ def openMyStimWindow(): #make it a function because have to do it several times,
     myWin = visual.Window(monitor=mon,size=(widthPixRequested,heightPixRequested),allowGUI=allowGUI,units=units,color=bgColor,colorSpace='rgb',fullscr=fullscr,screen=scrn,waitBlanking=waitBlank) #Holcombe lab monitor
     return myWin
 
+#Find out if screen may be Retina because of bug in psychopy for mouse coordinates (https://discourse.psychopy.org/t/mouse-coordinates-doubled-when-using-deg-units/11188/5)
+has_retina_scrn = False
+import subprocess
+if 'Darwin' in platform.system(): #Because want to run Unix commands, which won't work on Windows - only do it if Mac
+    resolutionOfScreens = subprocess.check_output("system_profiler SPDisplaysDataType | grep -i 'Resolution'",shell=True)
+    print("resolution of screens reported by system_profiler = ",resolutionOfScreens)
+    if subprocess.call("system_profiler SPDisplaysDataType | grep -i 'retina'", shell=True) == 0:
+        has_retina_scrn = True #https://stackoverflow.com/questions/58349657/how-to-check-is-it-a-retina-display-in-python-or-terminal
+dlgBoxTitle = 'Oliver honours, and no Mac Retina screen detected'
+if has_retina_scrn:
+    dlgBoxTitle = 'Oliver honours. At least one screen is apparently a Retina screen'
+    
 # create a dialog from dictionary 
 infoFirst = { 'Do staircase (only)': False, 'Check refresh etc':False, 'Fullscreen (timing errors if not)': False, 'Screen refresh rate': 60 }
 OK = gui.DlgFromDict(dictionary=infoFirst, 
-    title='AB or dualstream experiment OR staircase to find thresh noise level for T1 performance criterion', 
+    title=dlgBoxTitle, 
     order=['Do staircase (only)', 'Check refresh etc', 'Fullscreen (timing errors if not)'], 
     tip={'Check refresh etc': 'To confirm refresh rate and that can keep up, at least when drawing a grating'},
     #fixed=['Check refresh etc'])#this attribute can't be changed by the user
@@ -149,6 +164,18 @@ else:
    print('User cancelled from dialog box.')
    logging.flush()
    core.quit()
+
+#realtime timing check parameters
+longerThanRefreshTolerance = 0.27
+longFrameLimit = round(1000./refreshRate*(1.0+longerThanRefreshTolerance),3) # round(1000/refreshRate*1.5,2)
+msg = 'longFrameLimit=' + str(longFrameLimit) + ' Recording trials where one or more interframe interval exceeded this figure '
+logging.info(msg)
+print(msg)
+
+logging.info("computer platform="+sys.platform)
+#save a copy of the code as it was when that subject was run
+logging.info('File that generated this = sys.argv[0]= '+sys.argv[0])
+logging.info("has_retina_scrn="+str(has_retina_scrn))
 
 
 # Create list of stimuli
@@ -267,16 +294,17 @@ def collectResponse(probe,autopilot,quitExperiment):
     respTime = rtClock.getTime()
     return respRadius, quitExperiment, respTime
 
+fixatnMinDur = 0.6
+fixatnVariableDur = 0.4
+        
 trialClock = core.Clock()
 # run the experiment
 ts = list();
 nDone = 0
 quitExperiment = False
 for thisTrial in trials:  # handler can act like a for loop
-  
-    fixatnPeriod = 0.5
-    fixatnFrames = int( 0.5*refreshRate )
-    for frame in range(fixatnFrames):
+    fixatnPeriodFrames = int(   (fixatnMinDur + np.random.rand(1)*fixatnVariableDur)   *refreshRate)  #random interval
+    for frame in range(fixatnPeriodFrames):
         if frame % 2:
             fixation.draw()#flicker fixation on and off at framerate to see when skip frame
         else:
@@ -291,7 +319,6 @@ for thisTrial in trials:  # handler can act like a for loop
     t0=trialClock.getTime()       
 
     for frame in range(stimDurFrames):
-
         #Determine what frame we are on
         #if useClock: #Don't count on not missing frames. Use actual time.
         #  t = clock.getTime()
@@ -326,7 +353,8 @@ for thisTrial in trials:  # handler can act like a for loop
     print('respError=',respError)
     trials.data.add('respError', respError)
     trials.data.add('respTime', respTime)  # add the data to our set
-
+    trials.data.add('numLongFramesAfterFixation',numLongFramesAfterFixatn)
+    
     helpersAOH.accelerateComputer(0,process_priority, disable_gc) #turn off stuff that sped everything up. But I don't know if this works.
     #check for timing problems
     interframeIntervs = np.diff(ts)*1000 #difference in time between successive frames, in ms
@@ -356,8 +384,6 @@ for thisTrial in trials:  # handler can act like a for loop
     #separately report num timingBlips after fixation and after target cueing, because it dont' really matter earlier
     numLongFramesAfterFixation = len(  np.where( idxsInterframeLong > fixatnPeriodFrames )[0] )
     print('numLongFramesAfterFixation=',numLongFramesAfterFixation)
-    numLongFramesAfterCue = len(    np.where( idxsInterframeLong > fixatnPeriodFrames + cueFrames )[0]   )
-    print('numLongFramesAfterCue=',numLongFramesAfterCue) 
     #end timing check
 
     if quitExperiment:
