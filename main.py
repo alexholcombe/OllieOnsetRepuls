@@ -23,13 +23,13 @@ refreshRate = 60.0
 autoLogging = True
 
 monitorname = 'testmonitor'
-widthPixRequested= 1024 #monitor width in pixels
-heightPixRequested= 768 #800 #monitor height in pixels
-monitorwidth = 40.5 #monitor width in cm
+widthPixRequested= 1439 #1600 #monitor width in pixels
+heightPixRequested= 874 #800 #monitor height in pixels
+monitorwidth = 28.6 #monitor width in cm
 scrn=0 #0 to use main screen, 1 to use external screen connected to computer
-fullscr=False #True to use fullscreen, False to not. Timing probably won't be quite right if fullscreen = False
+fullscr= True #True to use fullscreen, False to not. Timing probably won't be quite right if fullscreen = False
 allowGUI = False
-viewdist = 57. #cm
+viewdist = 25. #cm
 bgColor = [-.7,-.7,-.7] # [-1,-1,-1]
 
 #####################################################################
@@ -198,10 +198,12 @@ respCircle = visual.Circle(
     fillColor='blue'  # Fill color
     #lineColor='black'  # Line color
 )
+minStimDur = 0.5  # Minimum duration
+maxStimDur = 1  # Maximum duration
 
-stimDur = 0.3
+stimDur = np.random.uniform(minStimDur, maxStimDur)
 stimDurFrames = int( np.floor(stimDur / (1./refreshRate)) )
-speed = 1 #degrees/second
+speed = 8 #degrees/second
 changeRadiusPerFrame = speed*1./refreshRate
 
 
