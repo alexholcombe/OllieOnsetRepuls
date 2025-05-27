@@ -5,7 +5,6 @@
 
 
 """
-
 from psychopy import monitors, visual, event, data, logging, core, sound, gui
 import psychopy.info
 import numpy as np
@@ -268,7 +267,9 @@ def collectResponse(probe,autopilot,quitExperiment):
     respTime = rtClock.getTime()
     return respRadius, quitExperiment, respTime
 
+trialClock = core.Clock()
 # run the experiment
+ts = list();
 nDone = 0
 quitExperiment = False
 for thisTrial in trials:  # handler can act like a for loop
@@ -285,8 +286,12 @@ for thisTrial in trials:  # handler can act like a for loop
     
     #stimulus 
     circle.radius =  thisTrial['circleRadius']
+    for L in range(len(ts)):
+        ts.remove(ts[0]) #clear ts array, in case that helps avoid memory leak
+    t0=trialClock.getTime()       
 
     for frame in range(stimDurFrames):
+
         #Determine what frame we are on
         #if useClock: #Don't count on not missing frames. Use actual time.
         #  t = clock.getTime()
@@ -304,7 +309,10 @@ for thisTrial in trials:  # handler can act like a for loop
         
         circle.radius = circle.radius + thisTrial['direction'] * changeRadiusPerFrame 
         myWin.flip()
-    
+        t=trialClock.getTime()-t0;
+        ts.append(t);        
+    #end of big stimulus loop
+
     #Collect response
     nDone += 1  # just for a quick reference
 
@@ -318,6 +326,39 @@ for thisTrial in trials:  # handler can act like a for loop
     print('respError=',respError)
     trials.data.add('respError', respError)
     trials.data.add('respTime', respTime)  # add the data to our set
+
+    helpersAOH.accelerateComputer(0,process_priority, disable_gc) #turn off stuff that sped everything up. But I don't know if this works.
+    #check for timing problems
+    interframeIntervs = np.diff(ts)*1000 #difference in time between successive frames, in ms
+    idxsInterframeLong = np.where( interframeIntervs > longFrameLimit ) [0] #frames that exceeded longerThanRefreshTolerance of expected duration
+    numCasesInterframeLong = len( idxsInterframeLong )
+    if numCasesInterframeLong >0:
+       longFramesStr =  'ERROR,'+str(numCasesInterframeLong)+' frames were longer than '+str(longFrameLimit)+' ms'
+       if demo: 
+         longFramesStr += 'not printing them all because in demo mode'
+       else:
+           longFramesStr += ' apparently screen refreshes skipped, interframe durs were:'+\
+                    str( np.around(  interframeIntervs[idxsInterframeLong] ,1  ) )+ ' and was these frames: '+ str(idxsInterframeLong)
+       if longFramesStr != None:
+                msg= 'trialnum=' + str(trialNum) + ' ' + longFramesStr
+                print(msg, file=logF)
+                print(msg)
+                if not demo:
+                    flankingAlso=list()
+                    for idx in idxsInterframeLong: #also print timing of one before and one after long frame
+                        if idx-1>=0:  flankingAlso.append(idx-1)
+                        else: flankingAlso.append(np.NaN)
+                        flankingAlso.append(idx)
+                        if idx+1<len(interframeIntervs):  flankingAlso.append(idx+1)
+                        else: flankingAlso.append(np.NaN)
+                    #print >>logF, 'flankers also='+str( np.around( interframeIntervs[flankingAlso], 1) ) 
+    #Informally, I noticed that it's only at the beginning of a trial that I see frequent fixation flicker (timing blips), so
+    #separately report num timingBlips after fixation and after target cueing, because it dont' really matter earlier
+    numLongFramesAfterFixation = len(  np.where( idxsInterframeLong > fixatnPeriodFrames )[0] )
+    print('numLongFramesAfterFixation=',numLongFramesAfterFixation)
+    numLongFramesAfterCue = len(    np.where( idxsInterframeLong > fixatnPeriodFrames + cueFrames )[0]   )
+    print('numLongFramesAfterCue=',numLongFramesAfterCue) 
+    #end timing check
 
     if quitExperiment:
         break
