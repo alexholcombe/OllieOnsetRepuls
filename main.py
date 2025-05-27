@@ -165,8 +165,22 @@ else:
    logging.flush()
    core.quit()
 
+if os.path.isdir('.'+os.sep+'dataRaw'):
+    dataDir='dataRaw'
+else:
+    print('"dataRaw" directory does not exist, so saving data in present working directory')
+    dataDir='.'
+expname = ''
+
+timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime()) 
+datafileName = dataDir+'/'+subject+ '_' + str(session) + '_' + expname+timeAndDateStr
+if not demo: #Create log for timing blips etc.
+    logF = logging.LogFile(datafileName+'.log', 
+        filemode='w',#if you set this to 'a' it will append instead of overwriting
+        level=logging.INFO)#errors, data and warnings will be sent to this logfile
+
 #realtime timing check parameters
-longerThanRefreshTolerance = 0 #0.27
+longerThanRefreshTolerance = 0.15 #0.27
 longFrameLimit = round(1000./refreshRate*(1.0+longerThanRefreshTolerance),3) # round(1000/refreshRate*1.5,2)
 msg = 'longFrameLimit=' + str(longFrameLimit) + ' Recording trials where one or more interframe interval exceeded this figure '
 logging.info(msg)
@@ -391,15 +405,6 @@ for thisTrial in trials:  # handler can act like a for loop
 
 # After the experiment, print a new line
 print('\n')
-
-if os.path.isdir('.'+os.sep+'dataRaw'):
-    dataDir='dataRaw'
-else:
-    print('"dataRaw" directory does not exist, so saving data in present working directory')
-    dataDir='.'
-expname = ''
-timeAndDateStr = time.strftime("%d%b%Y_%H-%M", time.localtime()) 
-datafileName = dataDir+'/'+subject+ '_' + str(session) + '_' + expname+timeAndDateStr
 
 # Write summary data to a text file ...
 trials.saveAsText(fileName=datafileName+'summary')
