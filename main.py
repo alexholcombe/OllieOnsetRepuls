@@ -25,8 +25,8 @@ process_priority = 'realtime' # 'normal' 'high' or 'realtime', but don't know if
 disable_gc = True
 
 monitorname = 'testmonitor'
-widthPixRequested= 1439 #1600 #monitor width in pixels
-heightPixRequested= 874 #800 #monitor height in pixels
+widthPixRequested= 1920 #1600 #monitor width in pixels
+heightPixRequested= 1080 #800 #monitor height in pixels
 monitorwidth = 28.6 #monitor width in cm
 scrn=0 #0 to use main screen, 1 to use external screen connected to computer
 fullscr= True #True to use fullscreen, False to not. Timing probably won't be quite right if fullscreen = False
@@ -57,7 +57,7 @@ if has_retina_scrn:
     dlgBoxTitle = 'Oliver honours. At least one screen is apparently a Retina screen'
     
 # create a dialog from dictionary 
-infoFirst = { 'Do staircase (only)': False, 'Check refresh etc':False, 'Fullscreen (timing errors if not)': False, 'Screen refresh rate': 60 }
+infoFirst = { 'Do staircase (only)': False, 'Check refresh etc':False, 'Fullscreen (timing errors if not)': fullscr, 'Screen refresh rate': refreshRate }
 OK = gui.DlgFromDict(dictionary=infoFirst, 
     title=dlgBoxTitle, 
     order=['Do staircase (only)', 'Check refresh etc', 'Fullscreen (timing errors if not)'], 
@@ -166,7 +166,7 @@ else:
    core.quit()
 
 #realtime timing check parameters
-longerThanRefreshTolerance = 0.27
+longerThanRefreshTolerance = 0 #0.27
 longFrameLimit = round(1000./refreshRate*(1.0+longerThanRefreshTolerance),3) # round(1000/refreshRate*1.5,2)
 msg = 'longFrameLimit=' + str(longFrameLimit) + ' Recording trials where one or more interframe interval exceeded this figure '
 logging.info(msg)
@@ -300,7 +300,7 @@ fixatnVariableDur = 0.4
 trialClock = core.Clock()
 # run the experiment
 ts = list();
-nDone = 0
+trialNum = 0
 quitExperiment = False
 for thisTrial in trials:  # handler can act like a for loop
     fixatnPeriodFrames = int(   (fixatnMinDur + np.random.rand(1)*fixatnVariableDur)   *refreshRate)  #random interval
@@ -341,10 +341,10 @@ for thisTrial in trials:  # handler can act like a for loop
     #end of big stimulus loop
 
     #Collect response
-    nDone += 1  # just for a quick reference
+    trialNum += 1  # just for a quick reference
 
     msg = 'trial %i had position %s in the list (circleRadius=%.1f)'
-    print(msg % (nDone, trials.thisIndex, thisTrial['circleRadius']))
+    print(msg % (trialNum, trials.thisIndex, thisTrial['circleRadius']))
 
     respRadius, quitExperiment, respTime = collectResponse(respCircle,autopilot,quitExperiment)
     print('quitExperiment=',quitExperiment,'respRadius=',respRadius)
@@ -353,7 +353,6 @@ for thisTrial in trials:  # handler can act like a for loop
     print('respError=',respError)
     trials.data.add('respError', respError)
     trials.data.add('respTime', respTime)  # add the data to our set
-    trials.data.add('numLongFramesAfterFixation',numLongFramesAfterFixatn)
     
     helpersAOH.accelerateComputer(0,process_priority, disable_gc) #turn off stuff that sped everything up. But I don't know if this works.
     #check for timing problems
@@ -384,6 +383,7 @@ for thisTrial in trials:  # handler can act like a for loop
     #separately report num timingBlips after fixation and after target cueing, because it dont' really matter earlier
     numLongFramesAfterFixation = len(  np.where( idxsInterframeLong > fixatnPeriodFrames )[0] )
     print('numLongFramesAfterFixation=',numLongFramesAfterFixation)
+    trials.data.add('numLongFramesAfterFixation',numLongFramesAfterFixation)
     #end timing check
 
     if quitExperiment:
