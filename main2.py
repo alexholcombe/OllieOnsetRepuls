@@ -14,6 +14,7 @@ from copy import deepcopy
 import time, sys, os#, pylab
 import string, platform
 from random import random
+from random import choice
 try:
     import stringResponse
 except ImportError:
@@ -32,7 +33,7 @@ scrn=0 #0 to use main screen, 1 to use external screen connected to computer
 fullscr= True #True to use fullscreen, False to not. Timing probably won't be quite right if fullscreen = False
 allowGUI = False
 viewdist = 25 #cm
-bgColor = [-.7,-.7,-.7] # [-1,-1,-1]
+bgColor = [0,0,0] # [-1,-1,-1]
 useRetina=True
 
 #####################################################################
@@ -225,12 +226,14 @@ else:
     fixationBlank= visual.GratingStim(myWin,tex='none',colorSpace='rgb',color=(-1,-1,-1),mask='circle',units='pix',size=fixSizePix,autoLog=autoLogging)
 fixationPoint = visual.GratingStim(myWin,colorSpace='rgb',color=(1,1,1),mask='circle',units='pix',size=2,autoLog=autoLogging) #put a point in the center
 
+#range for grey stimulus
+greyShades = [0.2, 0.4, 0.6, 0.8, 1]
+
 # Create a circle stimulus
 circle = visual.Circle(
     win=myWin,
     radius=50,  # Radius 
     edges=128,  # Number of edges to approximate the circle
-    fillColor='white'  # Fill color
     #lineColor='black'  # Line color
 )
 respCircle = visual.Circle(
@@ -319,6 +322,8 @@ ts = list();
 trialNum = 0
 quitExperiment = False
 for thisTrial in trials:  # handler can act like a for loop
+    randomGrey = choice(greyShades)
+    circle.fillColor= [randomGrey, randomGrey, randomGrey]  # Fill color
     fixatnPeriodFrames = int(   (fixatnMinDur + np.random.rand(1)*fixatnVariableDur)   *refreshRate)  #random interval
     for frame in range(fixatnPeriodFrames):
         if frame % 2:
@@ -400,6 +405,7 @@ for thisTrial in trials:  # handler can act like a for loop
     numLongFramesAfterFixation = len(  np.where( idxsInterframeLong > fixatnPeriodFrames )[0] )
     print('numLongFramesAfterFixation=',numLongFramesAfterFixation)
     trials.data.add('numLongFramesAfterFixation',numLongFramesAfterFixation)
+    trials.addData('greyShade', randomGrey) # Record the shade of grey used
     #end timing check
 
     if quitExperiment:
