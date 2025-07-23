@@ -227,7 +227,7 @@ else:
 fixationPoint = visual.GratingStim(myWin,colorSpace='rgb',color=(1,1,1),mask='circle',units='pix',size=2,autoLog=autoLogging) #put a point in the center
 
 #range for grey stimulus
-greyShades = [0.2, 0.4, 0.6, 0.8, 1]
+greyShades = [0.2, 1]
 
 # Create a circle stimulus
 circle = visual.Circle(
@@ -248,7 +248,7 @@ maxStimDur = 1  # Maximum duration
 
 stimDur = np.random.uniform(minStimDur, maxStimDur)
 stimDurFrames = int( np.floor(stimDur / (1./refreshRate)) )
-speed = 8 #degrees/second
+speed = 6 #degrees/second
 changeRadiusPerFrame = speed*1./refreshRate
 
 
