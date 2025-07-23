@@ -183,11 +183,14 @@ if not demo: #Create log for timing blips etc.
         level=logging.INFO)#errors, data and warnings will be sent to this logfile
 
 #realtime timing check parameters
-longerThanRefreshTolerance = 0.15 #0.27
-longFrameLimit = round(1000./refreshRate*(1.0+longerThanRefreshTolerance),3) # round(1000/refreshRate*1.5,2)
+differentFromRefreshTolerance = 0.15 #0.27
+longFrameLimit = round(1000./refreshRate*(1.0+differentFromRefreshTolerance),3) # round(1000/refreshRate*1.5,2)
 msg = 'longFrameLimit=' + str(longFrameLimit) + ' Recording trials where one or more interframe interval exceeded this figure '
 logging.info(msg)
 print(msg)
+shortFrameLimit = round(1000./refreshRate*(1.0-differentFromRefreshTolerance),3) # round(1000/refreshRate*1.5,2)
+msg = 'shortFrameLimit=' + str(shortFrameLimit) + ' Recording trials where one or more interframe interval too short, shorter than this figure'
+logging.info(msg)
 
 logging.info("computer platform="+sys.platform)
 #save a copy of the code as it was when that subject was run
@@ -380,6 +383,10 @@ for thisTrial in trials:  # handler can act like a for loop
     interframeIntervs = np.diff(ts)*1000 #difference in time between successive frames, in ms
     idxsInterframeLong = np.where( interframeIntervs > longFrameLimit ) [0] #frames that exceeded longerThanRefreshTolerance of expected duration
     numCasesInterframeLong = len( idxsInterframeLong )
+    #Also check for short frames, because MacOS Sonoma etc. have a bug so frame sync blocking doesn't work
+    idxsInterframeShort = np.where( interframeIntervs < shortFrameLimit ) [0] #frames shorter than tolerable
+    numCasesInterframeShort = len( idxsInterframeShort )
+    #Report on any long frames
     if numCasesInterframeLong >0:
        longFramesStr =  'ERROR,'+str(numCasesInterframeLong)+' frames were longer than '+str(longFrameLimit)+' ms'
        if demo: 
@@ -401,10 +408,36 @@ for thisTrial in trials:  # handler can act like a for loop
                         else: flankingAlso.append(np.NaN)
                     #print >>logF, 'flankers also='+str( np.around( interframeIntervs[flankingAlso], 1) ) 
     #Informally, I noticed that it's only at the beginning of a trial that I see frequent fixation flicker (timing blips), so
+    if numCasesInterframeShort >0:
+       shortFramesStr =  'ERROR,'+str(numCasesInterframeShort)+' frames were longer than '+str(longFrameLimit)+' ms'
+       if demo: 
+         shortFramesStr += 'not printing them all because in demo mode'
+       else:
+           shortFramesStr += ' apparently some screen refreshes were not waited for, interframe durs were:'+\
+                    str( np.around(  interframeIntervs[idxsInterframeShort] ,1  ) )+ ' and was these frames: '+ str(idxsInterframeShort)
+       if shortFramesStr != None:
+                msg= 'trialnum=' + str(trialNum) + ' ' + shortFramesStr
+                print(msg, file=logF)
+                print(msg)
+                if not demo:
+                    flankingAlso=list()
+                    for idx in idxsInterframeShort: #also print timing of one before and one after long frame
+                        if idx-1>=0:  flankingAlso.append(idx-1)
+                        else: flankingAlso.append(np.NaN)
+                        flankingAlso.append(idx)
+                        if idx+1<len(interframeIntervs):  flankingAlso.append(idx+1)
+                        else: flankingAlso.append(np.NaN)
+                    #print >>logF, 'flankers also='+str( np.around( interframeIntervs[flankingAlso], 1) ) 
+    #Informally, I noticed that it's only at the beginning of a trial that I see frequent fixation flicker (timing blips), so
+
     #separately report num timingBlips after fixation and after target cueing, because it dont' really matter earlier
     numLongFramesAfterFixation = len(  np.where( idxsInterframeLong > fixatnPeriodFrames )[0] )
     print('numLongFramesAfterFixation=',numLongFramesAfterFixation)
     trials.data.add('numLongFramesAfterFixation',numLongFramesAfterFixation)
+    numShortFramesAfterFixation = len(  np.where( idxsInterframeShort > fixatnPeriodFrames )[0] )
+    print('numShortFramesAfterFixation=',numShortFramesAfterFixation)
+    trials.data.add('numShortFramesAfterFixation',numShortFramesAfterFixation)
+
     trials.addData('greyShade', randomGrey) # Record the shade of grey used
     #end timing check
 
