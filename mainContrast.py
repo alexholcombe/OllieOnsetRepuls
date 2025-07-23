@@ -97,7 +97,6 @@ else: #checkRefreshEtc
             userProcsDetailed=True  ## if verbose and userProcsDetailed, return (command, process-ID) of the user's processes
             )
     #print(runInfo)
-    logging.info(runInfo)
     print('Finished runInfo- which assesses the refresh and processes of this computer') 
     #check screen refresh is what assuming it is ##############################################
     Hzs=list()
@@ -111,7 +110,7 @@ else: #checkRefreshEtc
     # end testing of screen refresh########################################################
     Hzs = np.array( Hzs );     Hz= np.median(Hzs)
     msPerFrame= 1000./Hz
-    refreshMsg1= 'Frames per second ~='+ str( np.round(Hz,1) )
+    refreshMsg1= 'Frames per second measured, ~='+ str( np.round(Hz,1) )
     refreshRateTolerancePct = 3
     pctOff = abs( (np.median(Hzs)-refreshRate) / refreshRate)
     refreshRateWrong =  pctOff > (refreshRateTolerancePct/100.)
@@ -120,7 +119,7 @@ else: #checkRefreshEtc
         refreshMsg1 += ' program assumes ' + str(refreshRate)
         refreshMsg2 =  'which is off by more than' + str(round(refreshRateTolerancePct,0)) + '%!!'
     else:
-        refreshMsg1 += ', which is close enough to desired val of ' + str( round(refreshRate,1) )
+        refreshMsg1 += ', close enough to desired val of ' + str( round(refreshRate,1) ) + '(' + str( round(1000/refreshRate,1) ) + 'ms)'
     myWinRes = myWin.size
     myWin.allowGUI =True
 myWin.close() #have to close window to show dialog box
@@ -135,7 +134,7 @@ session='a'
 #Create new dialog box, with results of timing test and with experiment parameters to set like subject name and session
 dlgLabelsOrdered = list() #new dialog box
 session='a'
-myDlg = psychopy.gui.Dlg(title="onset repulsion experiment", pos=(200,400))
+myDlg = psychopy.gui.Dlg(title="Oliver's onset repulsion experiment", pos=(200,400))
 if not autopilot:
     myDlg.addField('Subject name or ID:', subject, tip='')
     dlgLabelsOrdered.append('subject')
@@ -168,6 +167,8 @@ else:
    logging.flush()
    core.quit()
 
+##################################################################
+#Set up datafile name and log file 
 if os.path.isdir('.'+os.sep+'dataRaw'):
     dataDir='dataRaw'
 else:
@@ -181,6 +182,8 @@ if not demo: #Create log for timing blips etc.
     logF = logging.LogFile(datafileName+'.log', 
         filemode='w',#if you set this to 'a' it will append instead of overwriting
         level=logging.INFO)#errors, data and warnings will be sent to this logfile
+logging.info(refreshMsg1) #Provide some refresh rate info in log file. Can't do it above where tested because participant name not yet finalized
+
 
 #realtime timing check parameters
 differentFromRefreshTolerance = 0.15 #0.27
